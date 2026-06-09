@@ -1,0 +1,423 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>考研数学二真题管理系统</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- KaTeX CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <!-- 自定义样式 -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== 顶部标题 ===== -->
+  <header class="header">
+    <div class="container">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <h1>考研数学二真题管理系统</h1>
+          <p class="subtitle">收录 · 管理 · AI 答疑 · LaTeX 公式可视化</p>
+        </div>
+        <div class="d-none d-md-block">
+          <span class="badge bg-light text-dark fs-6" id="questionCount">共 0 道真题</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== 主体 ===== -->
+  <div class="main-wrap">
+    <div class="container">
+
+      <!-- 标签页导航 -->
+      <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="list-tab" data-bs-toggle="tab" data-bs-target="#tabList" type="button" role="tab">真题列表</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="add-tab" data-bs-toggle="tab" data-bs-target="#tabAdd" type="button" role="tab">录入题目</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#tabAI" type="button" role="tab">AI答疑</button>
+        </li>
+      </ul>
+
+      <!-- 标签页内容 -->
+      <div class="tab-content" id="mainTabContent">
+
+        <!-- ========== 真题列表 ========== -->
+        <div class="tab-pane fade show active" id="tabList" role="tabpanel">
+          <div id="listContainer">
+            <!-- 由 main.js 动态渲染 -->
+          </div>
+        </div>
+
+        <!-- ========== 录入题目 ========== -->
+        <div class="tab-pane fade" id="tabAdd" role="tabpanel">
+          <form id="addForm" novalidate>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="inputYear" class="form-label">年份 <span class="text-danger">*</span></label>
+                <select class="form-select" id="inputYear" required>
+                  <option value="">请选择年份</option>
+                </select>
+                <div class="invalid-feedback">请选择年份</div>
+              </div>
+              <div class="col-md-4">
+                <label for="inputType" class="form-label">题型 <span class="text-danger">*</span></label>
+                <select class="form-select" id="inputType" required>
+                  <option value="">请选择</option>
+                  <option value="选择题">选择题</option>
+                  <option value="填空题">填空题</option>
+                  <option value="解答题">解答题</option>
+                </select>
+                <div class="invalid-feedback">请选择题型</div>
+              </div>
+              <div class="col-md-4 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-secondary w-100" id="btnQuickFill">快速填入示例</button>
+              </div>
+              <div class="col-12">
+                <label for="inputContent" class="form-label">
+                  题目内容 <span class="text-danger">*</span>
+                  <small class="text-muted ms-2">公式请用 $...$（行内）或 $$...$$（独立块）包裹，如：$\int_0^1 x dx$</small>
+                </label>
+                <textarea class="form-control" id="inputContent" rows="8"
+                  placeholder="请输入题目内容，LaTeX 公式用 $...$ 或 $$...$$ 包裹&#10;&#10;例如：求极限 $\lim_{x \to 0} \frac{\sin x}{x}$。"
+                  required></textarea>
+                <div class="invalid-feedback">题目内容不能为空</div>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary px-5" id="btnSubmit">提交录入</button>
+              </div>
+            </div>
+          </form>
+          <!-- 录入预览区：实时预览公式渲染效果 -->
+          <div class="mt-4" id="previewArea" style="display:none;">
+            <hr>
+            <h6 class="text-muted">公式预览</h6>
+            <div class="preview-box p-3 bg-light rounded" id="previewContent"></div>
+          </div>
+        </div>
+
+        <!-- ========== AI答疑 ========== -->
+        <div class="tab-pane fade" id="tabAI" role="tabpanel">
+          <div class="row g-3">
+            <!-- API 配置区 -->
+            <div class="col-12">
+              <div class="card border-info">
+                <div class="card-header bg-info bg-opacity-10 py-2">
+                  <small class="fw-bold text-info-emphasis">API 配置（支持 OpenAI 兼容接口，如 DeepSeek / 通义千问 / 豆包等）</small>
+                </div>
+                <div class="card-body py-2">
+                  <div class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                      <label for="apiUrl" class="form-label small">接口地址</label>
+                      <input type="url" class="form-control form-control-sm" id="apiUrl"
+                        placeholder="https://api.openai.com/v1/chat/completions">
+                    </div>
+                    <div class="col-md-4">
+                      <label for="apiKey" class="form-label small">API Key</label>
+                      <div class="input-group input-group-sm">
+                        <input type="password" class="form-control" id="apiKey" placeholder="sk-...">
+                        <button class="btn btn-outline-secondary" type="button" id="toggleKeyVis">显示</button>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <label for="apiModel" class="form-label small">模型名</label>
+                      <input type="text" class="form-control form-control-sm" id="apiModel"
+                        placeholder="gpt-3.5-turbo">
+                    </div>
+                  </div>
+                  <div class="mt-2 d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary" id="apiStatusBadge">未配置</span>
+                    <button class="btn btn-outline-info btn-sm" id="btnSaveConfig">保存配置</button>
+                    <button class="btn btn-outline-info btn-sm" id="btnTestAPI">测试连接</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 提问区 -->
+            <div class="col-12">
+              <label for="questionSelector" class="form-label">选择真题（可选，将自动拼接至提问中）</label>
+              <select class="form-select" id="questionSelector">
+                <option value="">-- 不选择，仅提问 --</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label for="aiInput" class="form-label">你的提问 <span class="text-danger">*</span></label>
+              <textarea class="form-control" id="aiInput" rows="4"
+                placeholder="请输入你想问的问题，例如：这道题怎么解？考查什么知识点？"></textarea>
+            </div>
+            <div class="col-12 d-flex gap-2 flex-wrap">
+              <button class="btn btn-primary" id="btnAsk">开始答疑</button>
+              <button class="btn btn-outline-secondary" id="btnStopStream" style="display:none;" disabled>停止输出</button>
+              <button class="btn btn-outline-secondary" id="btnClearAI">清空结果</button>
+            </div>
+            <div class="col-12">
+              <!-- 加载状态 -->
+              <div class="loading-spinner" id="aiLoading">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-2 text-muted">AI 正在思考中，请稍候...</p>
+              </div>
+              <!-- 错误提示 -->
+              <div class="alert alert-danger d-none" id="aiError" role="alert"></div>
+              <!-- 结果展示区域 -->
+              <div class="ai-response" id="aiResponse">
+                <div class="text-muted text-center py-4" id="aiPlaceholder">配置好 API 后即可开始答疑</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.tab-content -->
+    </div><!-- /.container -->
+  </div>
+
+  <!-- ===== 底部版权 ===== -->
+  <footer class="footer">
+    <div class="container">
+      &copy; 2026 考研数学二真题管理系统 &nbsp;|&nbsp; 仅限本地学习使用 &nbsp;|&nbsp; 公式渲染由 KaTeX 驱动
+    </div>
+  </footer>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- KaTeX JS -->
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <!-- KaTeX 自动渲染插件 -->
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <!-- 自定义 JS -->
+  <script src="js/app.js"></script>
+  <!-- API 配置管理：保存 / 测试 / 流式答疑 -->
+  <script>
+  (function() {
+    'use strict';
+
+    var CFG_KEY = 'ai_api_config';
+
+    function loadCfg() {
+      try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch (e) { return {}; }
+    }
+    function saveCfg(obj) {
+      localStorage.setItem(CFG_KEY, JSON.stringify(obj));
+    }
+    function setCfg(field, val) {
+      var c = loadCfg();
+      c[field] = val;
+      saveCfg(c);
+    }
+
+    function $(id) { return document.getElementById(id); }
+
+    function updateStatusBadge() {
+      var badge = $('apiStatusBadge');
+      var url = ($('apiUrl').value || '').trim();
+      var key = ($('apiKey').value || '').trim();
+      var cls = 'bg-secondary';
+      var txt = '未配置';
+      if (url && key) { cls = 'bg-success'; txt = '已配置'; }
+      else if (url || key) { cls = 'bg-warning text-dark'; txt = '配置不完整'; }
+      badge.className = 'badge ' + cls;
+      badge.textContent = txt;
+    }
+
+    function saveConfig() {
+      setCfg('apiUrl', $('apiUrl').value.trim());
+      setCfg('apiKey', $('apiKey').value.trim());
+      setCfg('apiModel', $('apiModel').value.trim());
+      updateStatusBadge();
+      showToast('API 配置已保存');
+    }
+
+    function toggleKeyVisibility() {
+      var el = $('apiKey');
+      el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    async function testConnection() {
+      var apiUrl = $('apiUrl').value.trim();
+      var apiKey = $('apiKey').value.trim();
+      var model = ($('apiModel').value.trim()) || 'gpt-3.5-turbo';
+      if (!apiUrl || !apiKey) { showToast('请先填写接口地址和 API Key', 'danger'); return; }
+      $('aiError').classList.add('d-none');
+      $('aiResponse').innerHTML = '';
+      $('aiLoading').classList.add('show');
+      try {
+        var res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+          body: JSON.stringify({ model: model, messages: [{ role: 'user', content: 'Hello' }], max_tokens: 10 })
+        });
+        var text = await res.text();
+        if (res.ok) {
+          showToast('连接成功', 'success');
+          $('aiResponse').innerHTML = '<div class="alert alert-success mb-0">测试通过 (HTTP ' + res.status + ')</div>';
+        } else {
+          showToast('HTTP ' + res.status, 'danger');
+          $('aiResponse').innerHTML = '<div class="alert alert-danger mb-0"><strong>请求失败 (HTTP ' + res.status + ')</strong><br><small>' + escapeHtml(text.slice(0, 500)) + '</small></div>';
+        }
+      } catch (err) {
+        var hint = err.message.indexOf('Failed to fetch') !== -1 ? '<br><br>跨域拦截：请用 Live Server 启动，不要直接用 file://' : '';
+        showToast('网络错误', 'danger');
+        $('aiResponse').innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(err.message) + hint + '</div>';
+      } finally {
+        $('aiLoading').classList.remove('show');
+      }
+    }
+
+    var abortController = null;
+
+    async function askAIStream() {
+      var apiUrl = $('apiUrl').value.trim();
+      var apiKey = $('apiKey').value.trim();
+      var model = ($('apiModel').value.trim()) || 'gpt-3.5-turbo';
+      var question = $('aiInput').value.trim();
+      if (!apiUrl || !apiKey) { showToast('请先填写 API 配置', 'danger'); return; }
+      if (!question) { showToast('请输入提问内容', 'danger'); $('aiInput').focus(); return; }
+
+      var selector = $('questionSelector');
+      var prompt = '';
+      if (selector && selector.value) {
+        var list = loadQuestions();
+        var selected = list.find(function(q) { return q.id === selector.value; });
+        prompt = selected ? ('题目：' + selected.content + '\n\n用户提问：' + question) : ('用户提问：' + question);
+      } else {
+        prompt = '用户提问：' + question;
+      }
+      prompt += '\n\n请按以下三个部分返回，公式统一用 LaTeX 语法，行内公式用 $...$ 包裹，独立公式用 $$...$$ 包裹：\n【解题思路】\n【考点分析】\n【详细解答】';
+
+      $('aiError').classList.add('d-none');
+      var ph = $('aiPlaceholder');
+      if (ph) ph.style.display = 'none';
+      $('aiResponse').innerHTML = '<div class="section" id="streamingOutput"><div class="content" id="streamContent"></div></div>';
+      $('aiLoading').classList.add('show');
+      $('btnAsk').disabled = true;
+      $('btnStopStream').style.display = 'inline-block';
+      $('btnStopStream').disabled = false;
+
+      abortController = new AbortController();
+      try {
+        var res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+          body: JSON.stringify({ model: model, messages: [{ role: 'user', content: prompt }], stream: true }),
+          signal: abortController.signal
+        });
+        if (!res.ok) { var errText = await res.text(); throw new Error('HTTP ' + res.status + ': ' + errText.slice(0, 300)); }
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = '';
+        var fullText = '';
+        var streamContent = $('streamContent');
+        while (true) {
+          var result = await reader.read();
+          if (result.done) break;
+          buffer += decoder.decode(result.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (line.startsWith('data: ')) {
+              var data = line.slice(6).trim();
+              if (data === '[DONE]') continue;
+              try {
+                var parsed = JSON.parse(data);
+                var delta = parsed.choices && parsed.choices[0] && parsed.choices[0].delta;
+                if (delta && delta.content) { fullText += delta.content; streamContent.textContent = fullText; }
+              } catch (e) {}
+            }
+          }
+          if (fullText) {
+            clearTimeout(window._mathTimer);
+            window._mathTimer = setTimeout(function() {
+              try { renderMathInElement(streamContent, KATEX_CONFIG); } catch (e) {}
+            }, 300);
+          }
+        }
+        streamContent.textContent = fullText;
+        try { renderMathInElement(streamContent, KATEX_CONFIG); } catch (e) {}
+        var formatted = formatAIResponse(fullText);
+        if (formatted) {
+          $('aiResponse').innerHTML = formatted;
+          try { renderMathInElement($('aiResponse'), KATEX_CONFIG); } catch (e) {}
+        }
+        showToast('回答完成', 'success');
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          showToast('已停止', 'success');
+        } else {
+          var hint = err.message.indexOf('Failed to fetch') !== -1 ? '<br><br>跨域拦截：请用 Live Server 启动' : '';
+          $('aiError').innerHTML = '错误: ' + escapeHtml(err.message) + hint;
+          $('aiError').classList.remove('d-none');
+        }
+      } finally {
+        $('aiLoading').classList.remove('show');
+        $('btnAsk').disabled = false;
+        $('btnStopStream').style.display = 'none';
+        $('btnStopStream').disabled = true;
+        abortController = null;
+      }
+    }
+
+    function stopStream() {
+      if (abortController) abortController.abort();
+    }
+
+    function formatAIResponse(text) {
+      if (!text) return '';
+      var defs = [
+        { label: '解题思路', patterns: ['【解题思路】', '## 解题思路', '**解题思路**', '解题思路：', '解题思路'] },
+        { label: '考点分析', patterns: ['【考点分析】', '## 考点分析', '**考点分析**', '考点分析：', '考点分析'] },
+        { label: '详细解答', patterns: ['【详细解答】', '## 详细解答', '**详细解答**', '详细解答：', '详细解答'] }
+      ];
+      var parts = text.split(/(?=【解题思路】|【考点分析】|【详细解答】|## 解题思路|## 考点分析|## 详细解答|\*\*解题思路\*\*|\*\*考点分析\*\*|\*\*详细解答\*\*|解题思路：|考点分析：|详细解答：)/).filter(Boolean);
+      if (parts.length < 2) return '<div class="section"><h5>回答</h5><div class="content">' + escapeHtml(text) + '</div></div>';
+      var sections = [];
+      parts.forEach(function(part) {
+        var trimmed = part.trim();
+        if (!trimmed) return;
+        for (var si = 0; si < defs.length; si++) {
+          for (var pj = 0; pj < defs[si].patterns.length; pj++) {
+            if (trimmed.startsWith(defs[si].patterns[pj])) {
+              sections.push({ label: defs[si].label, body: trimmed.slice(defs[si].patterns[pj].length).trim() });
+              return;
+            }
+          }
+        }
+        sections.push({ label: null, body: trimmed });
+      });
+      var filtered = sections.filter(function(s) { return s.label !== null; });
+      if (filtered.length === 0) return '<div class="section"><h5>回答</h5><div class="content">' + escapeHtml(text) + '</div></div>';
+      var html = '';
+      filtered.forEach(function(s) { html += '<div class="section"><h5>' + s.label + '</h5><div class="content">' + escapeHtml(s.body) + '</div></div>'; });
+      return html;
+    }
+
+    function restoreConfig() {
+      var saved = loadCfg();
+      if (saved.apiUrl) $('apiUrl').value = saved.apiUrl;
+      if (saved.apiKey) $('apiKey').value = saved.apiKey;
+      if (saved.apiModel) $('apiModel').value = saved.apiModel;
+      updateStatusBadge();
+    }
+
+    restoreConfig();
+    $('btnSaveConfig').onclick = saveConfig;
+    $('btnTestAPI').onclick = testConnection;
+    $('toggleKeyVis').onclick = toggleKeyVisibility;
+    $('btnAsk').onclick = askAIStream;
+    $('btnStopStream').onclick = stopStream;
+    console.log('API inline script initialized');
+  })();
+  </script>
+</body>
+</html>
